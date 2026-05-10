@@ -1,40 +1,55 @@
+import { Point } from "./types";
+import { GAME_CONFIG } from "./config";
+import { Ball } from "./Ball";
+
 export class Hoop {
-  constructor(x, y, width, height) {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rimRadius: number;
+  backboardWidth: number;
+  backboardHeight: number;
+  netSegments: number;
+  scored: boolean;
+  lastBallY: number;
+
+  constructor(x: number, y: number, width: number, height: number) {
     this.x = x;
     this.y = y;
     this.width = width;
     this.height = height;
-    this.rimRadius = 8;
-    this.backboardWidth = 10;
-    this.backboardHeight = 80;
-    this.netSegments = 6;
+    this.rimRadius = GAME_CONFIG.HOOP_RIM_RADIUS;
+    this.backboardWidth = GAME_CONFIG.HOOP_BACKBOARD_WIDTH;
+    this.backboardHeight = GAME_CONFIG.HOOP_BACKBOARD_HEIGHT;
+    this.netSegments = GAME_CONFIG.HOOP_NET_SEGMENTS;
     this.scored = false;
     this.lastBallY = 9999;
   }
 
-  get leftRim() {
+  get leftRim(): Point {
     return { x: this.x - this.width / 2, y: this.y };
   }
 
-  get rightRim() {
+  get rightRim(): Point {
     return { x: this.x + this.width / 2, y: this.y };
   }
 
-  get backboard() {
+  get backboard(): { x: number; y: number; width: number; height: number } {
     return {
-      x: this.x + this.width / 2 + 15,
-      y: this.y - this.backboardHeight / 2 + 10,
+      x: this.x + this.width / 2 + GAME_CONFIG.HOOP_BACKBOARD_OFFSET_X,
+      y:
+        this.y - this.backboardHeight / 2 + GAME_CONFIG.HOOP_BACKBOARD_Y_OFFSET,
       width: this.backboardWidth,
       height: this.backboardHeight,
     };
   }
 
-  checkScore(ball) {
+  checkScore(ball: Ball): boolean {
     const hoopLeft = this.x - this.width / 2;
     const hoopRight = this.x + this.width / 2;
     const inHoopX = ball.x > hoopLeft && ball.x < hoopRight;
 
-    // Score if ball crosses rim line while in hoop area and moving down
     const wasAbove = this.lastBallY < this.y;
     const nowBelow = ball.y >= this.y;
 
@@ -42,7 +57,7 @@ export class Hoop {
       this.scored = true;
       setTimeout(() => {
         this.scored = false;
-      }, 800);
+      }, GAME_CONFIG.SCORE_COOLDOWN_MS);
       this.lastBallY = ball.y;
       return true;
     }
@@ -51,17 +66,16 @@ export class Hoop {
     return false;
   }
 
-  checkRimCollision(ball) {
-    const hoopLeft = this.x - this.width / 2 + 3;
-    const hoopRight = this.x + this.width / 2 - 3;
+  checkRimCollision(ball: Ball): void {
+    const hoopLeft = this.x - this.width / 2 + GAME_CONFIG.RIM_INWARD_OFFSET;
+    const hoopRight = this.x + this.width / 2 - GAME_CONFIG.RIM_INWARD_OFFSET;
     const inHoopX = ball.x > hoopLeft && ball.x < hoopRight;
 
-    // Don't collide if ball is passing through the hoop
     if (
       inHoopX &&
       ball.vy > 0 &&
       ball.y > this.y - ball.radius &&
-      ball.y < this.y + 30
+      ball.y < this.y + GAME_CONFIG.RIM_PASS_THROUGH_DEPTH
     ) {
       return;
     }
@@ -83,18 +97,19 @@ export class Hoop {
         ball.y += ny * overlap;
 
         const dotProduct = ball.vx * nx + ball.vy * ny;
-        ball.vx -= 1.5 * dotProduct * nx;
-        ball.vy -= 1.5 * dotProduct * ny;
+        ball.vx -= GAME_CONFIG.RIM_COLLISION_BOUNCE * dotProduct * nx;
+        ball.vy -= GAME_CONFIG.RIM_COLLISION_BOUNCE * dotProduct * ny;
 
-        ball.vx *= 0.7;
-        ball.vy *= 0.7;
+        ball.vx *= GAME_CONFIG.RIM_COLLISION_DAMPING;
+        ball.vy *= GAME_CONFIG.RIM_COLLISION_DAMPING;
 
-        ball.angularVelocity = ball.vx * 0.05;
+        ball.angularVelocity =
+          ball.vx * GAME_CONFIG.RIM_COLLISION_ANGULAR_FACTOR;
       }
     }
   }
 
-  checkBackboardCollision(ball) {
+  checkBackboardCollision(ball: Ball): void {
     const bb = this.backboard;
 
     if (
@@ -105,13 +120,13 @@ export class Hoop {
     ) {
       if (ball.vx > 0) {
         ball.x = bb.x - ball.radius;
-        ball.vx *= -0.6;
-        ball.angularVelocity = -ball.vy * 0.03;
+        ball.vx *= GAME_CONFIG.BACKBOARD_BOUNCE_DAMPING;
+        ball.angularVelocity = -ball.vy * GAME_CONFIG.BACKBOARD_ANGULAR_FACTOR;
       }
     }
   }
 
-  reset() {
+  reset(): void {
     this.scored = false;
     this.lastBallY = 9999;
   }
