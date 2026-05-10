@@ -9,4 +9,7 @@ export default defineConfig({
     outDir: "dist",
     assetsDir: "assets",
   },
+  resolve: {
+    extensions: [".ts", ".tsx", ".js", ".jsx"],
+  },
 });

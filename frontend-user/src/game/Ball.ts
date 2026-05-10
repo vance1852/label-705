@@ -1,5 +1,16 @@
+import { Vector2D } from "./types";
+
 export class Ball {
-  constructor(x, y, radius) {
+  x: number;
+  y: number;
+  radius: number;
+  vx: number;
+  vy: number;
+  rotation: number;
+  angularVelocity: number;
+  isResting: boolean;
+
+  constructor(x: number, y: number, radius: number) {
     this.x = x;
     this.y = y;
     this.radius = radius;
@@ -10,14 +21,18 @@ export class Ball {
     this.isResting = true;
   }
 
-  update() {
+  update(): void {
     this.x += this.vx;
     this.y += this.vy;
     this.rotation += this.angularVelocity;
     this.angularVelocity *= 0.98;
   }
 
-  get speed() {
+  get speed(): number {
     return Math.hypot(this.vx, this.vy);
+  }
+
+  get position(): Vector2D {
+    return { x: this.x, y: this.y };
   }
 }
