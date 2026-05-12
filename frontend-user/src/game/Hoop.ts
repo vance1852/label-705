@@ -1,26 +1,41 @@
+import { CONFIG } from "./config";
+import { Ball } from "./Ball";
+import type { Rim, Backboard } from "./types";
+
 export class Hoop {
-  constructor(x, y, width, height) {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rimRadius: number;
+  backboardWidth: number;
+  backboardHeight: number;
+  netSegments: number;
+  scored: boolean;
+  lastBallY: number;
+
+  constructor(x: number, y: number, width: number, height: number) {
     this.x = x;
     this.y = y;
     this.width = width;
     this.height = height;
-    this.rimRadius = 8;
-    this.backboardWidth = 10;
-    this.backboardHeight = 80;
-    this.netSegments = 6;
+    this.rimRadius = CONFIG.hoop.rimRadius;
+    this.backboardWidth = CONFIG.hoop.backboardWidth;
+    this.backboardHeight = CONFIG.hoop.backboardHeight;
+    this.netSegments = CONFIG.hoop.netSegments;
     this.scored = false;
     this.lastBallY = 9999;
   }
 
-  get leftRim() {
+  get leftRim(): Rim {
     return { x: this.x - this.width / 2, y: this.y };
   }
 
-  get rightRim() {
+  get rightRim(): Rim {
     return { x: this.x + this.width / 2, y: this.y };
   }
 
-  get backboard() {
+  get backboard(): Backboard {
     return {
       x: this.x + this.width / 2 + 15,
       y: this.y - this.backboardHeight / 2 + 10,
@@ -29,12 +44,11 @@ export class Hoop {
     };
   }
 
-  checkScore(ball) {
+  checkScore(ball: Ball): boolean {
     const hoopLeft = this.x - this.width / 2;
     const hoopRight = this.x + this.width / 2;
     const inHoopX = ball.x > hoopLeft && ball.x < hoopRight;
 
-    // Score if ball crosses rim line while in hoop area and moving down
     const wasAbove = this.lastBallY < this.y;
     const nowBelow = ball.y >= this.y;
 
@@ -42,7 +56,7 @@ export class Hoop {
       this.scored = true;
       setTimeout(() => {
         this.scored = false;
-      }, 800);
+      }, CONFIG.hoop.scoreTimeout);
       this.lastBallY = ball.y;
       return true;
     }
@@ -51,12 +65,11 @@ export class Hoop {
     return false;
   }
 
-  checkRimCollision(ball) {
+  checkRimCollision(ball: Ball): void {
     const hoopLeft = this.x - this.width / 2 + 3;
     const hoopRight = this.x + this.width / 2 - 3;
     const inHoopX = ball.x > hoopLeft && ball.x < hoopRight;
 
-    // Don't collide if ball is passing through the hoop
     if (
       inHoopX &&
       ball.vy > 0 &&
@@ -66,7 +79,7 @@ export class Hoop {
       return;
     }
 
-    const rims = [this.leftRim, this.rightRim];
+    const rims: Rim[] = [this.leftRim, this.rightRim];
 
     for (const rim of rims) {
       const dx = ball.x - rim.x;
@@ -83,18 +96,18 @@ export class Hoop {
         ball.y += ny * overlap;
 
         const dotProduct = ball.vx * nx + ball.vy * ny;
-        ball.vx -= 1.5 * dotProduct * nx;
-        ball.vy -= 1.5 * dotProduct * ny;
+        ball.vx -= CONFIG.collision.rimRestitution * dotProduct * nx;
+        ball.vy -= CONFIG.collision.rimRestitution * dotProduct * ny;
 
-        ball.vx *= 0.7;
-        ball.vy *= 0.7;
+        ball.vx *= CONFIG.collision.rimFriction;
+        ball.vy *= CONFIG.collision.rimFriction;
 
         ball.angularVelocity = ball.vx * 0.05;
       }
     }
   }
 
-  checkBackboardCollision(ball) {
+  checkBackboardCollision(ball: Ball): void {
     const bb = this.backboard;
 
     if (
@@ -105,13 +118,13 @@ export class Hoop {
     ) {
       if (ball.vx > 0) {
         ball.x = bb.x - ball.radius;
-        ball.vx *= -0.6;
+        ball.vx *= CONFIG.collision.backboardBounce;
         ball.angularVelocity = -ball.vy * 0.03;
       }
     }
   }
 
-  reset() {
+  reset(): void {
     this.scored = false;
     this.lastBallY = 9999;
   }
